@@ -1,0 +1,8 @@
+; $Id$
+ 
+ name = Poll Override
+ description = "Override some of the functionality of the poll module"
+ package = "Custom"
+ dependencies[] = poll
+ core = 6.x
+

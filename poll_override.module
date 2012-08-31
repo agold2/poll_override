@@ -1,0 +1,73 @@
+<?php
+/**
+ * @file
+ * Overrides some of the funcionality of the Poll module.
+ *
+ * Changes the way in which anonymous users vote and how voting 
+ * confirmation messages are displayed.
+ *
+ */
+
+/**
+  * Implementation of hook_form_alter().
+  *
+  */
+function poll_override_form_poll_view_voting_alter(&$form, &$form_state){
+  // Override the normal form submit for a submit function in this module.
+  $form['vote']['#submit'] = array('poll_override_form_submit');   
+
+
+    $node = isset($form['#node']) ? $form['#node'] : node_load($form['#nid']);
+ /*  $form['nid'] = array(
+         '#type' => 'hidden',
+         '#value' => '/node/' . $node->nid,
+     );
+ */
+}
+
+
+function poll_override_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL ) {
+  if ( $op == 'load' && $node->type == 'poll' ) {   
+      global $user;
+     
+      $poll = db_fetch_object(db_query("SELECT runtime, active FROM {poll} WHERE nid = %d", $node->nid));
+ 
+      // Load the appropriate choices into the $poll object.
+      $result = db_query("SELECT chtext, chvotes, chorder FROM {poll_choices} WHERE nid = %d ORDER BY chorder", $node->nid);
+      while ( $choice = db_fetch_array($result) ) {
+        $node->choice[$choice['chorder']] = $choice;
+      }
+ 
+      // Determine whether or not this user is allowed to vote.
+      $node->allowvotes = FALSE;
+      if ( user_access('vote on polls') && $poll->active ) {
+        $node->vote = -1;
+        $node->allowvotes = TRUE;
+      }  
+  }
+}
+
+
+/**
+ * Submit function for Poll Override module.
+ *
+ */
+function poll_override_form_submit($form, &$form_state) {
+  $node = $form['#node'];
+  $choice = $form_state['values']['choice'];
+ 
+  // just use a random number in place of IP address to avoid duplicate rows in the poll_votes table
+  db_query("INSERT INTO {poll_votes} (nid, chorder, hostname) VALUES (%d, %d, '%s')", $node->nid, $choice, mt_rand());
+
+ 
+  // Add one to the votes.
+  db_query("UPDATE {poll_choices} SET chvotes = chvotes + 1 WHERE nid = %d AND chorder = %d", $node->nid, $choice);
+ 
+  drupal_set_message(t('Thanks for voting!'));
+  // Return the user to whatever page they voted from.
+}
+
+
+function poll_override_preprocess_poll_vote(&$variables) {
+  $variables['nid'] = $variables['form']['#node']->nid;
+}
