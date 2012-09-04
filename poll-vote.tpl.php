@@ -26,5 +26,6 @@
   </div>
   <?php // This is the 'rest' of the form, in case items have been added. ?>
   <?php print $rest ?>
-  <?php print l(t('View Results'), "node/$nid/results");  ?>
+ <?php print l(t('View Results'), "node/$nid/results",  array('attributes' => array('id' => 'poll-view-results', 'class' => 'colorbox-inline')));  ?>
 </div>
+
